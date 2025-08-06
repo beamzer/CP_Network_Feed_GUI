@@ -48,45 +48,128 @@ def is_valid_ip(address):
     except ValueError:
         return False
 
-# A basic template using render_template_string for illustration.
-# In a production app, use proper template files.
+# Professional template with Bootstrap styling
 HTML_TEMPLATE = """
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-    <title>Network Feed Editor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Network Feed Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .ip-card { transition: all 0.2s ease; }
+        .ip-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .navbar-brand { font-weight: 600; }
+        .btn-delete { --bs-btn-padding-y: 0.25rem; --bs-btn-padding-x: 0.5rem; --bs-btn-font-size: 0.75rem; }
+    </style>
 </head>
-<body>
-    <h1>Allowed IPs</h1>
-    <ul>
-      {% for ip in ip_list %}
-        <li>{{ ip }} 
-            <form action="{{ url_for('delete_ip') }}" method="post" style="display:inline;">
-                <input type="hidden" name="ip" value="{{ ip }}">
-                <button type="submit">Delete</button>
-            </form>
-         </li>
-      {% endfor %}
-    </ul>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-shield-check me-2"></i>Network Feed Manager
+            </span>
+        </div>
+    </nav>
 
-    <h2>Add IP</h2>
-    <form method="post" action="{{ url_for('add_ip') }}">
-        <input type="text" name="ip" placeholder="Enter IP address">
-        <button type="submit">Add</button>
-    </form>
+    <div class="container">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="bi bi-info-circle me-2"></i>{{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
-    <p><a href="{{ url_for('versions') }}">View Versions / Rollback</a></p>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-list-ul me-2"></i>Allowed IP Addresses
+                            <span class="badge bg-secondary ms-2">{{ ip_list|length }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if ip_list %}
+                            <div class="row g-3">
+                                {% for ip in ip_list %}
+                                <div class="col-md-6">
+                                    <div class="card ip-card h-100">
+                                        <div class="card-body d-flex justify-content-between align-items-center py-3">
+                                            <div>
+                                                <i class="bi bi-globe text-primary me-2"></i>
+                                                <code class="text-dark">{{ ip }}</code>
+                                            </div>
+                                            <form action="{{ url_for('delete_ip') }}" method="post" class="d-inline">
+                                                <input type="hidden" name="ip" value="{{ ip }}">
+                                                <button type="submit" class="btn btn-outline-danger btn-delete" 
+                                                        onclick="return confirm('Remove {{ ip }}?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox display-1"></i>
+                                <p class="mt-3">No IP addresses configured yet</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-         <ul>
-         {% for message in messages %}
-           <li>{{ message }}</li>
-         {% endfor %}
-         </ul>
-      {% endif %}
-    {% endwith %}
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-plus-circle me-2"></i>Add New IP
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ url_for('add_ip') }}">
+                            <div class="mb-3">
+                                <label for="ip" class="form-label">IP Address</label>
+                                <input type="text" class="form-control" id="ip" name="ip" 
+                                       placeholder="192.168.1.100" required>
+                                <div class="form-text">Enter a valid IPv4 or IPv6 address</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg me-2"></i>Add IP Address
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock-history me-2"></i>Version Control
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text text-muted">
+                            View previous versions and rollback changes if needed.
+                        </p>
+                        <a href="{{ url_for('versions') }}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-archive me-2"></i>Manage Versions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 """
@@ -147,26 +230,80 @@ def versions():
             flash("Invalid version selected.")
             return redirect(url_for('versions'))
 
-    # Simple HTML for versions list.
+    # Professional versions page template
     version_html = """
     <!doctype html>
-    <html>
+    <html lang="en">
     <head>
-        <title>Versions</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Version History - Network Feed Manager</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     </head>
-    <body>
-        <h1>Available Versions</h1>
-        <form method="post">
-        <ul>
-            {% for bf in backups %}
-              <li>
-                {{ bf }} 
-                <button type="submit" name="version_file" value="{{ bf }}">Rollback to this version</button>
-              </li>
-            {% endfor %}
-        </ul>
-        </form>
-        <p><a href="{{ url_for('index') }}">Back to main view</a></p>
+    <body class="bg-light">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+            <div class="container">
+                <a class="navbar-brand" href="{{ url_for('index') }}">
+                    <i class="bi bi-shield-check me-2"></i>Network Feed Manager
+                </a>
+                <span class="navbar-text">Version History</span>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-clock-history me-2"></i>Version History
+                            </h5>
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Main
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            {% if backups %}
+                                <form method="post">
+                                    <div class="list-group">
+                                        {% for bf in backups %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <i class="bi bi-file-text text-primary me-2"></i>
+                                                <strong>{{ bf }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {% set parts = bf.replace('allowed_ips_', '').replace('.txt', '').split('_') %}
+                                                    {% if parts|length >= 2 %}
+                                                        {{ parts[0][:4] }}-{{ parts[0][4:6] }}-{{ parts[0][6:8] }} 
+                                                        {{ parts[1][:2] }}:{{ parts[1][2:4] }}:{{ parts[1][4:6] }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            <button type="submit" name="version_file" value="{{ bf }}" 
+                                                    class="btn btn-warning btn-sm"
+                                                    onclick="return confirm('Rollback to this version? This will replace the current configuration.')">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>Rollback
+                                            </button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </form>
+                            {% else %}
+                                <div class="text-center py-5 text-muted">
+                                    <i class="bi bi-archive display-1"></i>
+                                    <p class="mt-3">No backup versions available yet</p>
+                                    <small>Versions are created automatically when you make changes</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
     </html>
     """
