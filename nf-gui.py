@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from flask import Flask, request, redirect, render_template_string, flash, url_for
-import os, shutil, datetime, ipaddress
+import os, shutil, datetime, ipaddress, fcntl, time
 
 app = Flask(__name__)
 app.secret_key = 'changeme'
@@ -23,23 +23,49 @@ except OSError as e:
         os.makedirs(VERSIONS_DIR)
 
 def load_ips():
-    """Read the list of IP addresses from the file."""
+    """Read the list of IP addresses from the file with file locking."""
     if not os.path.exists(IP_FILE):
         return []
-    with open(IP_FILE, 'r') as f:
-        return [line.strip() for line in f if line.strip()]
+    
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            with open(IP_FILE, 'r') as f:
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)  # Shared lock for reading
+                return [line.strip() for line in f if line.strip()]
+        except (IOError, OSError) as e:
+            if attempt < max_retries - 1:
+                time.sleep(0.1)  # Brief delay before retry
+                continue
+            else:
+                # If we can't get the lock after retries, return empty list
+                return []
 
 def save_ips(ips):
-    """Before saving, archive the current file to a versioned copy, then write new content."""
-    # Backup current file if exists
-    if os.path.exists(IP_FILE):
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_name = os.path.join(VERSIONS_DIR, f'allowed_ips_{timestamp}.txt')
-        shutil.copy2(IP_FILE, backup_name)
-    # Write the new file
-    with open(IP_FILE, 'w') as f:
-        for ip in ips:
-            f.write(ip + "\n")
+    """Before saving, archive the current file to a versioned copy, then write new content with file locking."""
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            # Create backup with microsecond precision to avoid conflicts
+            if os.path.exists(IP_FILE):
+                timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+                backup_name = os.path.join(VERSIONS_DIR, f'allowed_ips_{timestamp}.txt')
+                shutil.copy2(IP_FILE, backup_name)
+            
+            # Write the new file with exclusive lock
+            with open(IP_FILE, 'w') as f:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)  # Exclusive lock for writing
+                for ip in ips:
+                    f.write(ip + "\n")
+            break  # Success, exit retry loop
+            
+        except (IOError, OSError) as e:
+            if attempt < max_retries - 1:
+                time.sleep(0.1)  # Brief delay before retry
+                continue
+            else:
+                # If we can't get the lock after retries, raise the exception
+                raise e
 
 def is_valid_ip(address):
     try:
