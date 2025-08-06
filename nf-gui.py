@@ -5,13 +5,22 @@ import os, shutil, datetime, ipaddress
 app = Flask(__name__)
 app.secret_key = 'changeme'
 
-# Configuration
-IP_FILE = 'allowed_ips.txt'
-VERSIONS_DIR = 'versions'
+# Configuration - use absolute paths based on script location
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+IP_FILE = os.path.join(SCRIPT_DIR, 'allowed_ips.txt')
+VERSIONS_DIR = os.path.join(SCRIPT_DIR, 'versions')
 
 # Make sure the versions directory exists
-if not os.path.exists(VERSIONS_DIR):
-    os.makedirs(VERSIONS_DIR)
+try:
+    if not os.path.exists(VERSIONS_DIR):
+        os.makedirs(VERSIONS_DIR)
+except OSError as e:
+    print(f"Error creating versions directory: {e}")
+    # Fallback to a temporary directory if we can't create in script dir
+    import tempfile
+    VERSIONS_DIR = os.path.join(tempfile.gettempdir(), 'nf_gui_versions')
+    if not os.path.exists(VERSIONS_DIR):
+        os.makedirs(VERSIONS_DIR)
 
 def load_ips():
     """Read the list of IP addresses from the file."""
