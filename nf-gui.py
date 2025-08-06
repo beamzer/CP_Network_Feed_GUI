@@ -43,10 +43,66 @@ def save_ips(ips):
 
 def is_valid_ip(address):
     try:
-        ipaddress.ip_address(address)
+        ip = ipaddress.ip_address(address)
         return True
     except ValueError:
         return False
+
+def is_internet_routable_ip(address):
+    """Check if IP address is Internet-routable (not private, loopback, multicast, etc.)"""
+    try:
+        ip = ipaddress.ip_address(address)
+        
+        # Reject IPv4 non-routable addresses
+        if ip.version == 4:
+            # Loopback (127.0.0.0/8)
+            if ip.is_loopback:
+                return False, "Loopback addresses (127.x.x.x) are not allowed"
+            
+            # Private networks (RFC1918: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+            if ip.is_private:
+                return False, "Private network addresses (RFC1918) are not allowed"
+            
+            # Multicast (224.0.0.0/4)
+            if ip.is_multicast:
+                return False, "Multicast addresses (224.x.x.x - 239.x.x.x) are not allowed"
+            
+            # Reserved/unspecified (0.0.0.0/8)
+            if ip.is_unspecified or ip.is_reserved:
+                return False, "Reserved or unspecified addresses are not allowed"
+            
+            # APIPA/Link-local (169.254.0.0/16)
+            if ip.is_link_local:
+                return False, "APIPA/Link-local addresses (169.254.x.x) are not allowed"
+            
+            # Broadcast
+            if str(ip).endswith('.255'):
+                return False, "Broadcast addresses are not allowed"
+                
+            # Additional specific ranges to block
+            # 0.0.0.0/8 (this network)
+            if ipaddress.ip_address('0.0.0.0') <= ip <= ipaddress.ip_address('0.255.255.255'):
+                return False, "Network 0.0.0.0/8 addresses are not allowed"
+                
+        # Reject IPv6 non-routable addresses  
+        elif ip.version == 6:
+            if ip.is_loopback:
+                return False, "IPv6 loopback address (::1) is not allowed"
+            if ip.is_private:
+                return False, "IPv6 private addresses are not allowed"
+            if ip.is_multicast:
+                return False, "IPv6 multicast addresses are not allowed"
+            if ip.is_unspecified:
+                return False, "IPv6 unspecified address (::) is not allowed"
+            if ip.is_link_local:
+                return False, "IPv6 link-local addresses are not allowed"
+            if ip.is_reserved:
+                return False, "IPv6 reserved addresses are not allowed"
+                
+        return True, None
+        
+    except ValueError:
+        return False, "Invalid IP address format"
 
 # Professional template with Bootstrap styling
 HTML_TEMPLATE = """
@@ -188,6 +244,11 @@ def add_ip():
 
     if not is_valid_ip(ip):
         flash(f"{ip} is not a valid IP address.")
+        return redirect(url_for('index'))
+    
+    is_routable, error_msg = is_internet_routable_ip(ip)
+    if not is_routable:
+        flash(f"{ip}: {error_msg}")
         return redirect(url_for('index'))
 
     ips = load_ips()
