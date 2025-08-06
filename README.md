@@ -1,4 +1,4 @@
-# A web app to maintain a Network Feed ip-list for a Check Point firewall
+# A web app to maintain a Network Feed ip-list for (Check Point) firewalls
 
 ## 🤝 Contributing
 
